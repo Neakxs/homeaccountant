@@ -1,0 +1,2 @@
+class Cookie:
+    AUTHENTICATION = 'SESSION_ID'
