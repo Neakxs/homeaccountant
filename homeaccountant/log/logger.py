@@ -5,7 +5,7 @@ import logging.handlers
 from multiprocessing import Queue
 
 from homeaccountant import config
-from homeaccountant.log.utils import ColoredConsoleHandler, LogLevel
+from homeaccountant.log.utils import ColoredRotatingFileHandler, ColoredConsoleHandler, LogLevel
 
 
 class CustomLogger(logging.Logger):
@@ -72,13 +72,18 @@ class LogWrapper:
 
     def _get_handlers(self, level):
         formatter = CustomFormatter.get_formatter(level)
+        handlers = []
         if config.SERVER.LOGGING.FILE:
-            handler = None
-        else:
+            handler = ColoredRotatingFileHandler(config.SERVER.LOGGING.FILE, 'a', maxBytes=config.SERVER.LOGGING.FILE_SIZE, backupCount=2)
+            handler.setLevel(level)
+            handler.setFormatter(formatter)
+            handlers.append(handler)
+        if config.SERVER.LOGGING.PRINT:
             handler = ColoredConsoleHandler()
             handler.setLevel(level)
             handler.setFormatter(formatter)
-        return [handler]
+            handlers.append(handler)
+        return handlers
 
 
 try:

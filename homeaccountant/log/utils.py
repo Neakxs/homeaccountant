@@ -33,4 +33,26 @@ class ColoredConsoleHandler(logging.StreamHandler):
         else:
             color = '\x1b[0m'
         myrecord.msg = color + str(myrecord.msg) + '\x1b[0m'
-        logging.StreamHandler.emit(self, myrecord)
+        super().emit(myrecord)
+
+
+class ColoredRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    def emit(self, record):
+        myrecord = copy.copy(record)
+        levelno = myrecord.levelno
+        if levelno >= LogLevel.CRITICAL:
+            color = '\x1b[35m'
+        elif levelno >= LogLevel.ERROR:
+            color = '\x1b[31m'
+        elif levelno >= LogLevel.WARNING:
+            color = '\x1b[33m'
+        elif levelno >= LogLevel.INFO:
+            color = '\x1b[32m'
+        elif levelno >= LogLevel.DEBUG:
+            color = '\x1b[36m'
+        elif levelno >= LogLevel.TRACE:
+            color = '\x1b[34m'
+        else:
+            color = '\x1b[0m'
+        myrecord.msg = color + str(myrecord.msg) + '\x1b[0m'
+        super().emit(myrecord)

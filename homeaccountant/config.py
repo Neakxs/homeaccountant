@@ -10,8 +10,9 @@ class SERVER:
 
     class LOGGING:
         FILE = None
-        FILE_SIZE = 4 * 10**16
-        VERBOSITY = 'TRACE'
+        FILE_SIZE = 4 * 10**6
+        PRINT = True
+        VERBOSITY = 'INFO'
 
     class REGISTRATION:
         ALLOW = True
@@ -63,6 +64,7 @@ def load_configuration(path):
     with open(path, 'r') as f:
         d = yaml.load(f, Loader=yaml.FullLoader)
     update_attributes(d)
+
 
 try:
     load_configuration(os.path.join(str(pathlib.Path.home()),
