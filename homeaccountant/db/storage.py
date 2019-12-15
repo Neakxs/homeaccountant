@@ -7,6 +7,7 @@ from sqlalchemy.sql.ddl import CreateTable
 from aiopg.sa import create_engine
 
 from homeaccountant import config
+from homeaccountant.db.utils import User
 from homeaccountant.db.tables import UserSQL
 
 
@@ -19,6 +20,27 @@ class Storage:
             resp = await conn.execute(UserSQL.insert().values(email=user.email, password_salt=user.password_salt, password_hash=user.password_hash))
             user.uid = (await resp.fetchone())[0]
             return user
+
+    async def get_user(self, user):
+        async with self._engine.acquire() as conn:
+            if user.uid:
+                resp = await conn.execute(UserSQL.select().where(UserSQL.c.id == user.uid))
+            elif user.email:
+                resp = await conn.execute(UserSQL.select().where(UserSQL.c.email == user.email))
+            else:
+                return None
+            try:
+                r = await resp.fetchone()
+                return User(**{
+                    'uid': r[0],
+                    'email': r[1],
+                    'display_name': r[2],
+                    'password_salt': r[3],
+                    'password_hash': r[4],
+                    'enabled': r[5]
+                })
+            except TypeError:
+                return None
 
     async def close(self):
         try:
