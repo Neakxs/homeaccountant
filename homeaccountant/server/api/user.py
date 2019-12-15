@@ -51,7 +51,7 @@ async def registerUser(request):
         if (await request.app.storage.get_user(userlogin)):
             raise web.HTTPOk
         if config.SERVER.REGISTRATION.EMAIL_CONFIRMATION:
-            token = base64.b64encode(str(userlogin)).decode('utf8')
+            token = base64.b64encode(sha256(str(userlogin).encode('utf8')).digest()).decode('utf8')
             await request.app.cache.write_variable(token, userlogin.__dict__, expire=900)
             await request.app.sendmail.send_token(email, 'HomeAccountant Registration', token)
         else:
@@ -77,7 +77,7 @@ async def confirmUser(request):
             pass
         raise web.HTTPOk
     except Exception:
-        raise web.HTTPNotFound
+        raise
 
 
 @user_routes.get('/user/login')
