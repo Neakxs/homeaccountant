@@ -8,6 +8,11 @@ class SERVER:
     HOSTNAME = '127.0.0.1'
     PORT = 8080
 
+    class LOGGING:
+        FILE = None
+        FILE_SIZE = 4 * 10**16
+        VERBOSITY = 'TRACE'
+
     class REGISTRATION:
         ALLOW = True
         REGEX = r'.*'
