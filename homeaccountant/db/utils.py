@@ -7,3 +7,4 @@ class User:
     password_hash: str
     uid: int = None
     enabled: bool = False
+    display_name: str = None

@@ -1,4 +1,5 @@
 import re
+import base64
 import logging
 import psycopg2.errors
 
@@ -18,13 +19,16 @@ try:
 except:
     regex_email_allowed = re.compile(r'.*')
 
+
 @user_routes.get('/user')
 async def getUser(request):
     raise NotImplementedError
 
+
 @user_routes.put('/user')
 async def putUser(request):
     raise NotImplementedError
+
 
 @user_routes.post('/user/register')
 async def registerUser(request):
@@ -36,25 +40,50 @@ async def registerUser(request):
         if not (regex_email.match(email) and regex_email_allowed.match(email)):
             raise web.HTTPBadRequest
         password_salt = uuid4().hex
-        password_hash = sha256('{}{}'.format(data['password'], password_salt).encode('utf8')).hexdigest()
-        userlogin = User(email=email, password_hash=password_hash, password_salt=password_salt, enabled=False)
-        # try:
-        #     userlogin = await request.app.storage.add_user(userlogin) # Send JWT with info to store in mail
-        # except UniqueViolation:
-        #     raise web.HTTPOk
-        # Send mail for user confirmation
+        password_hash = sha256('{}{}'.format(
+            data['password'], password_salt).encode('utf8')).hexdigest()
+        if config.SERVER.REGISTRATION.ADMIN_CONFIRMATION:
+            enabled = False
+        else:
+            enabled = True
+        userlogin = User(email=email, password_hash=password_hash,
+                         password_salt=password_salt, enabled=enabled)
+        if (await request.app.storage.get_user(userlogin)):
+            raise web.HTTPOk
+        if config.SERVER.REGISTRATION.EMAIL_CONFIRMATION:
+            token = base64.b64encode(str(userlogin)).decode('utf8')
+            await request.app.cache.write_variable(token, userlogin.__dict__, expire=900)
+            await request.app.sendmail.send_token(email, 'HomeAccountant Registration', token)
+        else:
+            try:
+                userlogin = await request.app.storage.add_user(userlogin)
+            except UniqueViolation:
+                pass
+        raise web.HTTPOk
     except web.HTTPError:
         raise
-    except Exception as e:
+    except Exception:
         raise
+
 
 @user_routes.get('/user/confirm')
 async def confirmUser(request):
-    raise NotImplementedError
+    try:
+        token = request.rel_url.query['token']
+        userlogin = User(**(await request.app.cache.read_variable(token)))
+        try:
+            userlogin = await request.app.storage.add_user(userlogin)
+        except UniqueViolation:
+            pass
+        raise web.HTTPOk
+    except Exception:
+        raise web.HTTPNotFound
+
 
 @user_routes.get('/user/login')
 async def loginUser(request):
     raise NotImplementedError
+
 
 @user_routes.get('/user/logout')
 async def logoutUser(request):

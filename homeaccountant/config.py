@@ -4,12 +4,14 @@ import pathlib
 
 
 class SERVER:
+    DOMAIN = 'localhost'
     HOSTNAME = '127.0.0.1'
     PORT = 8080
 
     class REGISTRATION:
         ALLOW = True
         REGEX = r'.*'
+        ADMIN_CONFIRMATION = False
         EMAIL_CONFIRMATION = False
 
     class SENDMAIL:
@@ -57,6 +59,8 @@ def load_configuration(path):
         d = yaml.load(f, Loader=yaml.FullLoader)
     update_attributes(d)
 
-
-load_configuration(os.path.join(str(pathlib.Path.home()),
-                                '.config/homeaccountant/config.yaml'))
+try:
+    load_configuration(os.path.join(str(pathlib.Path.home()),
+                                    '.config/homeaccountant/config.yaml'))
+except:
+    print("File not found.")
