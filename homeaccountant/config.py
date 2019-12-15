@@ -4,12 +4,14 @@ import pathlib
 
 
 class SERVER:
+    DOMAIN = 'localhost'
     HOSTNAME = '127.0.0.1'
     PORT = 8080
 
     class REGISTRATION:
         ALLOW = True
         REGEX = r'.*'
+        ADMIN_CONFIRMATION = False
         EMAIL_CONFIRMATION = False
 
     class SENDMAIL:
