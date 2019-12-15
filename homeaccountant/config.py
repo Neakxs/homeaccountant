@@ -59,6 +59,8 @@ def load_configuration(path):
         d = yaml.load(f, Loader=yaml.FullLoader)
     update_attributes(d)
 
-
-load_configuration(os.path.join(str(pathlib.Path.home()),
-                                '.config/homeaccountant/config.yaml'))
+try:
+    load_configuration(os.path.join(str(pathlib.Path.home()),
+                                    '.config/homeaccountant/config.yaml'))
+except:
+    print("File not found.")
