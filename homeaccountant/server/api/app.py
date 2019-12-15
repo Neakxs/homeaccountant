@@ -1,4 +1,3 @@
-
 import re
 import time
 import asyncio
@@ -12,7 +11,7 @@ from homeaccountant.server.api import user, transaction
 from homeaccountant.server.types import Cookie
 from homeaccountant.db import cache, storage
 
-auth_regex = re.compile(r'.*/user/(login|register)$')
+auth_regex = re.compile(r'.*/user/(login|register|confirm.*)$')
 
 
 @web.middleware
@@ -31,26 +30,30 @@ async def authentication_middleware(request, handler):
     return await handler(request)
 
 
-class ConfirmationTokenSender:
+class MailSender:
     def __init__(self):
         self._executor = ThreadPoolExecutor(max_workers=2)
         if config.SERVER.SENDMAIL.USE_SSL:
-            self._server = smtplib.SMTP_SSL(config.SERVER.SENDMAIL.HOSTNAME, config.SERVER.SENDMAIL.PORT)
+            self._server = smtplib.SMTP_SSL(
+                config.SERVER.SENDMAIL.HOSTNAME, config.SERVER.SENDMAIL.PORT)
         else:
-            self._server = smtplib.SMTP(config.SERVER.SENDMAIL.HOSTNAME, config.SERVER.SENDMAIL.PORT)
+            self._server = smtplib.SMTP(
+                config.SERVER.SENDMAIL.HOSTNAME, config.SERVER.SENDMAIL.PORT)
 
     def _send_token(self, mail_to, subject, token):
-        self._server.connect(config.SERVER.SENDMAIL.HOSTNAME, config.SERVER.SENDMAIL.PORT)
-        self._server.helo()
-        self._server.login(config.SERVER.SENDMAIL.USERNAME, config.SERVER.SENDMAIL.PASSWORD)
-        msg = '''Subject: {subject}
-        {token}
-        '''.format(subject=subject, token=token)
+        self._server.connect(config.SERVER.SENDMAIL.HOSTNAME,
+                             config.SERVER.SENDMAIL.PORT)
+        self._server.ehlo()
+        self._server.login(config.SERVER.SENDMAIL.USERNAME,
+                           config.SERVER.SENDMAIL.PASSWORD)
+        msg = '''Subject: {subject}\r\n\r\nYou can confirm your registration by following this link : http://{domain}/user/confirm?token={token}'''.format(
+            domain=config.SERVER.DOMAIN, subject=subject, token=token)
         self._server.sendmail(config.SERVER.SENDMAIL.USERNAME, mail_to, msg)
         self._server.quit()
 
     async def send_token(self, *args, **kwargs):
-        asyncio.get_event_loop().run_in_executor(self._executor, self._send_token, *args, **kwargs)
+        asyncio.get_event_loop().run_in_executor(
+            self._executor, self._send_token, *args, **kwargs)
 
 
 class WebAPI:
@@ -58,6 +61,7 @@ class WebAPI:
         self.__app = web.Application(middlewares=[authentication_middleware])
         self.__app.cache = None
         self.__app.storage = None
+        self.__app.sendmail = MailSender()
         self.__site = None
         self.__app.add_routes(user.user_routes)
         self.__app.add_routes(transaction.transaction_routes)
