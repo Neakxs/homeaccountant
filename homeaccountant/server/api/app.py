@@ -1,5 +1,6 @@
 import re
 import time
+import urllib
 import asyncio
 import smtplib
 
@@ -47,7 +48,7 @@ class MailSender:
         self._server.login(config.SERVER.SENDMAIL.USERNAME,
                            config.SERVER.SENDMAIL.PASSWORD)
         msg = '''Subject: {subject}\r\n\r\nYou can confirm your registration by following this link : http://{domain}/user/confirm?token={token}'''.format(
-            domain=config.SERVER.DOMAIN, subject=subject, token=token)
+            domain=config.SERVER.DOMAIN, subject=subject, token=urllib.parse.quote(token))
         self._server.sendmail(config.SERVER.SENDMAIL.USERNAME, mail_to, msg)
         self._server.quit()
 
