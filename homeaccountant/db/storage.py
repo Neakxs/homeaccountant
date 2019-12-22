@@ -4,12 +4,21 @@ import asyncio
 import sqlalchemy as sa
 
 from sqlalchemy.sql.ddl import CreateTable
+from sqlalchemy.orm import sessionmaker
 from aiopg.sa import create_engine
 
 from homeaccountant import config
-from homeaccountant.db.utils import User
-from homeaccountant.db.tables import UserSQL
+from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory
+from homeaccountant.db.tables import UserSQL, TransactionFamilySQL, TransactionCategorySQL
 
+
+SQL_TABLES = [UserSQL, TransactionFamilySQL, TransactionCategorySQL]
+DEFAULT_FAMILIES = [
+    {'name':'Family 1', 'uid': 1},
+    {'name':'Family 2', 'uid': 2},
+    {'name':'Family 3', 'uid': 3},
+    {'name':'Others', 'uid': 4}
+]
 
 class Storage:
     def __init__(self):
@@ -24,7 +33,7 @@ class Storage:
     async def get_user(self, user):
         async with self._engine.acquire() as conn:
             if user.uid:
-                resp = await conn.execute(UserSQL.select().where(UserSQL.c.id == user.uid))
+                resp = await conn.execute(UserSQL.select().where(UserSQL.c.uid == user.uid))
             elif user.email:
                 resp = await conn.execute(UserSQL.select().where(UserSQL.c.email == user.email))
             else:
@@ -39,6 +48,45 @@ class Storage:
                     'password_hash': r[4],
                     'enabled': r[5]
                 })
+            except TypeError:
+                return None
+
+    async def get_transaction_family(self, transaction_family_name):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.name == transaction_family_name))
+            try:
+                r = await resp.fetchone()
+                if r:
+                    return TransactionFamily(**{
+                        'uid': r[0],
+                        'name': r[1]
+                    })
+                else:
+                    return None
+            except TypeError:
+                return None
+    
+    async def add_transaction_category(self, transaction_category):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(TransactionCategorySQL.insert().values(name=transaction_category.name, user_uid=transaction_category.user.uid, transaction_family_uid=transaction_category.family.uid))
+            transaction_category.uid = (await resp.fetchone())[0]
+            return transaction_category
+
+    async def get_transaction_category(self, name, family_name):
+        async with self._engine.acquire() as conn:
+            transaction_family_uid = (await self.get_transaction_family(family_name)).uid
+            resp = await conn.execute(TransactionCategorySQL.select().where(sa.and_(TransactionCategorySQL.c.name == name, TransactionCategorySQL.c.transaction_family_uid == transaction_family_uid)))
+            try:
+                r = await resp.fetchone()
+                if r:
+                    return TransactionCategory(**{
+                        'uid': r[0],
+                        'name': r[1],
+                        'user': r[2],
+                        'family': r[3]
+                    })
+                else:
+                    return None
             except TypeError:
                 return None
 
@@ -61,6 +109,10 @@ class Storage:
     async def _get_existing_tables(self, conn):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    async def _get_existing_families(self, conn):
+        raise NotImplementedError
+
     @classmethod
     async def open_storage(cls):
         storage = PostgresStorage()
@@ -69,10 +121,16 @@ class Storage:
 
     async def __init_tables(self):
         async with self._engine.acquire() as conn:
+            Session = sessionmaker(bind=conn)
+            session = Session()
             existing_tables = {i[0] for i in (await (await self._get_existing_tables(conn)).fetchall())}
-            for table in [UserSQL]:
+            for table in SQL_TABLES:
                 if str(table) not in existing_tables:
                     await conn.execute(CreateTable(table))
+            existing_families = {i[0] for i in (await (await self._get_existing_families(conn)).fetchall())}
+            for family in DEFAULT_FAMILIES:
+                if family['uid'] not in existing_families:
+                    await conn.execute(TransactionFamilySQL.insert().values(**family))
 
 
 class PostgresStorage(Storage):
@@ -88,6 +146,11 @@ class PostgresStorage(Storage):
     async def _get_existing_tables(self, conn):
         return await conn.execute(
             "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'")
+
+    async def _get_existing_families(self, conn):
+        return await conn.execute(
+            'SELECT * FROM "TRANSACTION_FAMILY";' 
+        )
 
 
 async def main():

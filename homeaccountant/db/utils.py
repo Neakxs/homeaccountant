@@ -8,3 +8,16 @@ class User:
     uid: int = None
     enabled: bool = False
     display_name: str = None
+
+@dataclass
+class TransactionFamily:
+    name: str
+    uid: int = None
+
+
+@dataclass
+class TransactionCategory:
+    name: str
+    user: User
+    family: TransactionFamily
+    uid: int = None
