@@ -100,18 +100,17 @@ async def loginUser(request):
         password_hash = sha256('{}{}'.format(
             password, userlogin.password_salt).encode('utf8')).hexdigest()
         if password_hash == userlogin.password_hash:
-            token = str(uuid4())
-            await request.app.cache.write_variable(
-                token, userlogin.__dict__, expire=3600)
+            tokens = request.app.tokenmanager.generate_session_tokens(userlogin.uid)
             return web.json_response(data={
-                'token': token,
-                'validity': 3600
-            })
+                'auth_token': tokens['auth'],
+                'refresh_token': tokens['refresh']
+                })
         else:
             raise web.HTTPForbidden
     except web.HTTPError:
         raise
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         raise
 
 
