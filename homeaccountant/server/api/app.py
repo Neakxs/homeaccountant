@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from homeaccountant import config
 from homeaccountant.db.utils import User
 from homeaccountant.log.logger import getLogger
-from homeaccountant.server.api import user, transaction
+from homeaccountant.server.api import user, transaction, bearer
 from homeaccountant.db import cache, storage
 
 logger = getLogger()
@@ -20,12 +20,13 @@ bearer_regex = re.compile(r'Bearer\s(?P<token>.*)$')
 
 @web.middleware
 async def authentication_middleware(request, handler):
-    cache = request.app.cache
     authorized = False
     try:
         token = bearer_regex.match(request.headers['Authorization']).group('token')
-        request['user'] = User(**(await cache.read_variable(token)))
-        authorized = True
+        uid = request.app.tokenmanager.get_uid(token)
+        if uid != None:
+            request['user_uid'] = uid
+            authorized = True
     except KeyError:
         pass
     if not auth_regex.match(str(request.rel_url)) and not authorized:
@@ -63,8 +64,8 @@ class MailSender:
 class WebAPI:
     def __init__(self):
         self.__app = web.Application(middlewares=[authentication_middleware])
-        self.__app.cache = None
         self.__app.storage = None
+        self.__app.tokenmanager = None
         self.__app.sendmail = MailSender()
         self.__site = None
         self.__app.add_routes(user.user_routes)
@@ -75,8 +76,8 @@ class WebAPI:
 
     async def run(self):
         runner = web.AppRunner(self.__app)
-        self.__app.cache = cache.Cache.create_cache()
         self.__app.storage = await storage.Storage.open_storage()
+        self.__app.tokenmanager = bearer.TokenManager()
         await runner.setup()
         self.__site = web.TCPSite(
             runner, config.SERVER.HOSTNAME, config.SERVER.PORT)

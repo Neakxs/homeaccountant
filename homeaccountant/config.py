@@ -8,6 +8,10 @@ class SERVER:
     HOSTNAME = '127.0.0.1'
     PORT = 8080
 
+    class LOGIN:
+        AUTH_TOKEN_EXPIRE = 300
+        REFRESH_TOKEN_EXIRE = 3600
+
     class LOGGING:
         FILE = None
         FILE_SIZE = 4 * 10**6

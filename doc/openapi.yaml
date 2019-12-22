@@ -12,6 +12,10 @@ info:
 servers:
   - url: 'https://example.homeaccountant.io/api/v1'
 tags:
+  - name: account
+    description: Operations related to accounts management
+  - name: subscription
+    description: Operations dealing with recurrent transactions
   - name: transaction
     description: Operations related to transactions management
   - name: user
@@ -28,6 +32,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
         '403':
           description: Unauthorized
     put:
@@ -37,6 +45,12 @@ paths:
         - bearerAuth: []
       summary: Update informations about logged in user
       operationId: putUser
+      requestBody:
+        required: True
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInfo'           
       responses:
         '200':
           description: OK
@@ -113,10 +127,10 @@ components:
     BearerToken:
       type: object
       properties:
-        token:
+        auth_token:
           type: string
-        validity:
-          type: integer
+        refresh_token:
+          type: string
     UserLogin:
       type: object
       properties:
@@ -126,6 +140,14 @@ components:
         password:
           type: string
           format: password
+    UserInfo:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
   securitySchemes:
     basicAuth:
       type: http
@@ -133,4 +155,4 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: UUID
+      bearerFormat: JWT
