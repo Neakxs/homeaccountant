@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  description: A self-hosted web application created for managing bank accounts.
+  version: "1.0.0"
+  title: Home Accountant
+  contact:
+    name: Neakxs
+    url: 'https://github.com/Neakxs'
+  license:
+    name: MIT
+    url: 'https://github.com/Neakxs/home-accountant/blob/master/LICENSE'
+servers:
+  - url: 'https://example.homeaccountant.io/api/v1'
+tags:
+  - name: transaction
+    description: Operations related to transactions management
+  - name: user
+    description: Operations about user
+paths:
+  /user:
+    get:
+      tags:
+        - user
+      security: 
+        - bearerAuth: []
+      summary: Get informations about a logged in user
+      operationId: getUser
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: Unauthorized
+    put:
+      tags:
+        - user
+      security:
+        - bearerAuth: []
+      summary: Update informations about logged in user
+      operationId: putUser
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+  /user/login:
+    post:
+      tags:
+        - user
+      security:
+        - basicAuth: []
+      summary: Login a user to this API
+      operationId: loginUser
+      requestBody:
+        required: True
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'      
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BearerToken'
+        '401':
+          description: Unauthorized
+  /user/logout:
+    get:
+      tags:
+        - user
+      security:
+        - bearerAuth: []
+      summary: Lougout a logged in user
+      operationId: logoutUser
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+  /user/confirm:
+    get:
+      tags:
+        - user
+      summary: Confirm user operation
+      operationId: confirmUser
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not Found
+  /user/register:
+    post:
+      tags:
+        - user
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: True
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '403':
+          description: Functionnality is disabled
+components:
+  schemas:
+    BearerToken:
+      type: object
+      properties:
+        token:
+          type: string
+        validity:
+          type: integer
+    UserLogin:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: UUID

@@ -18,7 +18,7 @@ class SERVER:
         ALLOW = True
         REGEX = r'.*'
         ADMIN_CONFIRMATION = False
-        EMAIL_CONFIRMATION = False
+        EMAIL_CONFIRMATION = True
 
     class SENDMAIL:
         ENABLED = False

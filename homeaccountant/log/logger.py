@@ -7,6 +7,8 @@ from multiprocessing import Queue
 from homeaccountant import config
 from homeaccountant.log.utils import ColoredRotatingFileHandler, ColoredConsoleHandler, LogLevel
 
+logging.getLogger('aiohttp').setLevel(LogLevel.CRITICAL)
+
 
 class CustomLogger(logging.Logger):
     def trace(self, msg, *args, **kwargs):
@@ -74,7 +76,8 @@ class LogWrapper:
         formatter = CustomFormatter.get_formatter(level)
         handlers = []
         if config.SERVER.LOGGING.FILE:
-            handler = ColoredRotatingFileHandler(config.SERVER.LOGGING.FILE, 'a', maxBytes=config.SERVER.LOGGING.FILE_SIZE, backupCount=2)
+            handler = ColoredRotatingFileHandler(
+                config.SERVER.LOGGING.FILE, 'a', maxBytes=config.SERVER.LOGGING.FILE_SIZE, backupCount=2)
             handler.setLevel(level)
             handler.setFormatter(formatter)
             handlers.append(handler)
@@ -91,6 +94,4 @@ try:
 except:
     log_wrapper = LogWrapper(LogLevel.INFO)
 
-
-def getLogger(name=None):
-    return log_wrapper.get_logger(name)
+getLogger = log_wrapper.get_logger

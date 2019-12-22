@@ -8,22 +8,24 @@ from aiohttp import web
 from concurrent.futures import ThreadPoolExecutor
 
 from homeaccountant import config
+from homeaccountant.db.utils import User
+from homeaccountant.log.logger import getLogger
 from homeaccountant.server.api import user, transaction
-from homeaccountant.server.types import Cookie
 from homeaccountant.db import cache, storage
 
-auth_regex = re.compile(r'.*/user/(login|register|confirm.*)$')
+logger = getLogger()
 
+auth_regex = re.compile(r'.*/user/(login|register|confirm.*)$')
+bearer_regex = re.compile(r'Bearer\s(?P<token>.*)$')
 
 @web.middleware
 async def authentication_middleware(request, handler):
     cache = request.app.cache
     authorized = False
     try:
-        auth_cookie = request.cookies[Cookie.AUTHENTICATION]
-        expires = (await cache.read_variable(auth_cookie))['expiresAfter']
-        if expires <= time.time_ns():
-            authorized = True
+        token = bearer_regex.match(request.headers['Authorization']).group('token')
+        request['user'] = User(**(await cache.read_variable(token)))
+        authorized = True
     except KeyError:
         pass
     if not auth_regex.match(str(request.rel_url)) and not authorized:
@@ -53,8 +55,9 @@ class MailSender:
         self._server.quit()
 
     async def send_token(self, *args, **kwargs):
-        asyncio.get_event_loop().run_in_executor(
-            self._executor, self._send_token, *args, **kwargs)
+        if config.SERVER.SENDMAIL.ENABLED:
+            asyncio.get_event_loop().run_in_executor(
+                self._executor, self._send_token, *args, **kwargs)
 
 
 class WebAPI:
