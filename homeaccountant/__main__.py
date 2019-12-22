@@ -11,6 +11,9 @@ logger = getLogger()
 
 log_wrapper.start()
 api = WebAPI()
-asyncio.get_event_loop().run_until_complete(api.run())
-asyncio.get_event_loop().run_forever()
+try:
+    asyncio.get_event_loop().run_until_complete(api.run())
+    asyncio.get_event_loop().run_forever()
+except KeyboardInterrupt:
+    logger.warning('Shutting down with KeyboardInterrupt')
 log_wrapper.stop()
