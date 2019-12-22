@@ -72,22 +72,21 @@ class Storage:
             transaction_category.uid = (await resp.fetchone())[0]
             return transaction_category
 
-    async def get_transaction_category(self, transaction_category):
+    async def get_transaction_category(self, name, family_name):
         async with self._engine.acquire() as conn:
-            if transaction_category.uid:
-                resp = await conn.execute(TransactionCategorySQL.select().where(TransactionCategorySQL.c.uid == transaction_category.uid))
-            elif transaction_category.name:
-                resp = await conn.execute(TransactionCategorySQL.select().where(TransactionCategorySQL.c.name == transaction_category.name))
-            else:
-                return None
+            transaction_family_uid = (await self.get_transaction_family(family_name)).uid
+            resp = await conn.execute(TransactionCategorySQL.select().where(sa.and_(TransactionCategorySQL.c.name == name, TransactionCategorySQL.c.transaction_family_uid == transaction_family_uid)))
             try:
                 r = await resp.fetchone()
-                return TransactionCategory(**{
-                    'uid': r[0],
-                    'name': r[1],
-                    'user': r[2],
-                    'family': r[3]
-                })
+                if r:
+                    return TransactionCategory(**{
+                        'uid': r[0],
+                        'name': r[1],
+                        'user': r[2],
+                        'family': r[3]
+                    })
+                else:
+                    return None
             except TypeError:
                 return None
 

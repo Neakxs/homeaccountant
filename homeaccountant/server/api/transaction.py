@@ -2,7 +2,7 @@ from aiohttp import web
 
 from homeaccountant import config
 from homeaccountant.log.logger import getLogger
-from homeaccountant.db.utils import TransactionFamily, TransactionCategory
+from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory
 
 logger = getLogger()
 
@@ -34,7 +34,27 @@ async def getTransactionFamily(request):
 
 @transaction_routes.get('/transactioncategory')
 async def getTransactionCategory(request):
-    raise NotImplementedError
+    try:
+        data = await request.json()
+        family_name = data['family_name']
+        name = data['name']
+        user_uid = request['user_uid']
+        try:
+            transaction_category = await request.app.storage.get_transaction_category(name, family_name)
+            if transaction_category:
+                return web.json_response(data={
+                    'uid': transaction_category.uid,
+                    'name': transaction_category.name,
+                    'user': str(transaction_category.user),
+                    'family': str(transaction_category.family)
+                })
+        except ValueError as e:
+            logger.exception(e)
+            raise
+        raise web.HTTPOk
+    except Exception as e:
+        logger.exception(e)
+        raise
 
 
 @transaction_routes.get('/transaction')
@@ -57,19 +77,21 @@ async def registerTransactionCategory(request):
     try:
         data = await request.json()
         name = data['name']
-        user_uid = data['user_uid']
+        user_uid = request['user_uid']
         family_name = data['family']
         try:
-            transaction_family_uid = request.app.storage.get_transaction_family(family_name).uid
+            transaction_family = await request.app.storage.get_transaction_family(family_name)
+            # TODO: instead a creating a User object, use api get_user
+            user = await request.app.storage.get_user(User(None, None, None, uid=user_uid))
         except ValueError:
             raise
         transaction_category = TransactionCategory(
             name=name,
-            user_uid=user_uid,
-            transaction_family_uid=transaction_family_uid
+            user=user,
+            family=transaction_family
         )
         logger.debug('Trying to add {}'.format(transaction_category))
-        if (await request.app.storage.get_transaction_category):
+        if (await request.app.storage.get_transaction_category(transaction_category.name, transaction_category.family.name)):
             logger.debug('{} is already used'.format(transaction_family.name))
             raise web.HTTPOk
         else:
