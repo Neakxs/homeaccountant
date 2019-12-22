@@ -1,5 +1,11 @@
 from aiohttp import web
 
+from homeaccountant import config
+from homeaccountant.log.logger import getLogger
+from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory
+
+logger = getLogger()
+
 transaction_routes = web.RouteTableDef()
 
 
@@ -9,12 +15,44 @@ transaction_routes = web.RouteTableDef()
 
 @transaction_routes.get('/transactionfamily')
 async def getTransactionFamily(request):
-    raise NotImplementedError
+    try:
+        data = await request.json()
+        family_name = data['name']
+        try:
+            transaction_family = await request.app.storage.get_transaction_family(family_name)
+            if transaction_family:
+                return web.json_response(data={
+                    'uid': transaction_family.uid,
+                    'name': transaction_family.name
+                })
+        except ValueError:
+            raise
+        raise web.HTTPOk
+    except Exception:
+        raise
 
 
 @transaction_routes.get('/transactioncategory')
 async def getTransactionCategory(request):
-    raise NotImplementedError
+    try:
+        data = await request.json()
+        family_name = data['family_name']
+        name = data['name']
+        user_uid = request['user_uid']
+        try:
+            transaction_category = await request.app.storage.get_transaction_category(name, family_name)
+            if transaction_category:
+                return web.json_response(data={
+                    'uid': transaction_category.uid,
+                    'name': transaction_category.name,
+                    'user': str(transaction_category.user),
+                    'family': str(transaction_category.family)
+                })
+        except ValueError:
+            raise
+        raise web.HTTPOk
+    except Exception:
+        raise
 
 
 @transaction_routes.get('/transaction')
@@ -32,14 +70,38 @@ async def getPermanentTransaction(request):
 # CREATE OPERATIONS #
 #####################
 
-@transaction_routes.post('/transactionfamily')
-async def registerTransactionFamily(request):
-    raise NotImplementedError
-
-
 @transaction_routes.post('/transactioncategory')
 async def registerTransactionCategory(request):
-    raise NotImplementedError
+    try:
+        data = await request.json()
+        name = data['name']
+        user_uid = request['user_uid']
+        family_name = data['family']
+        try:
+            transaction_family = await request.app.storage.get_transaction_family(family_name)
+            # TODO: instead a creating a User object, use api get_user
+            user = await request.app.storage.get_user(User(None, None, None, uid=user_uid))
+        except ValueError:
+            raise
+        transaction_category = TransactionCategory(
+            name=name,
+            user=user,
+            family=transaction_family
+        )
+        logger.debug('Trying to add {}'.format(transaction_category))
+        if (await request.app.storage.get_transaction_category(transaction_category.name, transaction_category.family.name)):
+            logger.debug('{} is already used'.format(transaction_family.name))
+            raise web.HTTPOk
+        else:
+            try:
+                transaction_category = await request.app.storage.add_transaction_category(transaction_category)
+            except UniqueViolation:
+                pass
+        raise web.HTTPOk
+    except web.HTTPError:
+        raise
+    except Exception:
+        raise
 
 
 @transaction_routes.post('/transaction')
