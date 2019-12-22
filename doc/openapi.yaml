@@ -21,12 +21,124 @@ tags:
   - name: user
     description: Operations about user
 paths:
+  /account:
+    get:
+      parameters: 
+        - in: query
+          name: offset
+          schema:
+            type: integer
+        - in: query
+          name: quantity
+          schema:
+            type: integer
+      tags:
+        - account
+      security:
+        - bearerAuth: [auth]
+      operationId: getAccounts
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountList'
+        '401':
+          description: Unauthorized
+    post:
+      tags:
+        - account
+      security :
+        - bearerAuth: [auth]
+      operationId: postAccount
+      requestBody:
+        required: True
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountS'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request          
+        '401':
+          description: Unauthorized          
+  /account/{id}:
+    get:
+      parameters: 
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      tags:
+        - account
+      security:
+        - bearerAuth: [auth]
+      operationId: getAccount
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountS'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found         
+    put:
+      parameters: 
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      tags:
+        - account
+      security:
+        - bearerAuth: [auth]
+      operationId: putAccount
+      requestBody:
+        required: True
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountS'      
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request           
+        '401':
+          description: Unauthorized
+    delete:
+      parameters: 
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      tags:
+        - account
+      security:
+        - bearerAuth: [auth]
+      operationId: deleteAccount
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
   /user:
     get:
       tags:
         - user
       security: 
-        - bearerAuth: []
+        - bearerAuth: [auth]
       summary: Get informations about a logged in user
       operationId: getUser
       responses:
@@ -36,13 +148,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserInfo'
-        '403':
+        '401':
           description: Unauthorized
     put:
       tags:
         - user
       security:
-        - bearerAuth: []
+        - bearerAuth: [auth]
       summary: Update informations about logged in user
       operationId: putUser
       requestBody:
@@ -50,7 +162,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserInfo'           
+              anyOf:
+                - $ref: '#/components/schemas/email'
+                - $ref: '#/components/schemas/password'
+                - $ref: '#/components/schemas/display_name'
+            example: 
+              display_name: John Doe
       responses:
         '200':
           description: OK
@@ -62,7 +179,7 @@ paths:
         - user
       security:
         - basicAuth: []
-        - bearerAuth: []
+        - bearerAuth: [refresh]
       summary: Login a user to this API
       operationId: loginUser
       responses:
@@ -79,7 +196,7 @@ paths:
       tags:
         - user
       security:
-        - bearerAuth: []
+        - bearerAuth: [auth]
       summary: Lougout a logged in user
       operationId: logoutUser
       responses:
@@ -119,6 +236,35 @@ paths:
           description: Functionnality is disabled
 components:
   schemas:
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        value:
+          type: string
+        acronym:
+          type: string
+    AccountS:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        acronym:
+          type: string    
+    AccountList:
+      type: object
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+        quantity:
+          type: integer
     BearerToken:
       type: object
       properties:
@@ -143,6 +289,14 @@ components:
           format: email
         display_name:
           type: string
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      format: password
+    display_name:
+      type: string
   securitySchemes:
     basicAuth:
       type: http
