@@ -22,6 +22,14 @@ Here is an example :
     server:
         hostname: 127.0.0.1
         port: 8080
+        login:
+            auth_token_expire: 900
+            refresh_token_expire: 7200
+        logging:
+            file: /path/to/log/file
+            file_size: 4000000
+            print: True
+            verbosity: DEBUG
         registration:
             allow: True
             regex: .*@example.com$
