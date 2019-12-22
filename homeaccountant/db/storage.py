@@ -4,6 +4,7 @@ import asyncio
 import sqlalchemy as sa
 
 from sqlalchemy.sql.ddl import CreateTable
+from sqlalchemy.orm import sessionmaker
 from aiopg.sa import create_engine
 
 from homeaccountant import config
@@ -12,6 +13,12 @@ from homeaccountant.db.tables import UserSQL, TransactionFamilySQL, TransactionC
 
 
 SQL_TABLES = [UserSQL, TransactionFamilySQL, TransactionCategorySQL]
+DEFAULT_FAMILIES = [
+    {'name':'Family 1', 'uid': 1},
+    {'name':'Family 2', 'uid': 2},
+    {'name':'Family 3', 'uid': 3},
+    {'name':'Others', 'uid': 4}
+]
 
 class Storage:
     def __init__(self):
@@ -43,12 +50,6 @@ class Storage:
                 })
             except TypeError:
                 return None
-
-    async def add_transaction_family(self, transaction_family):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(TransactionFamilySQL.insert().values(name=transaction_family.name))
-            transaction_family.uid = (await resp.fetchone())[0]
-            return transaction_family
 
     async def get_transaction_family(self, transaction_family):
         async with self._engine.acquire() as conn:
@@ -119,10 +120,14 @@ class Storage:
 
     async def __init_tables(self):
         async with self._engine.acquire() as conn:
+            Session = sessionmaker(bind=conn)
+            session = Session()
             existing_tables = {i[0] for i in (await (await self._get_existing_tables(conn)).fetchall())}
             for table in SQL_TABLES:
                 if str(table) not in existing_tables:
                     await conn.execute(CreateTable(table))
+            for family in DEFAULT_FAMILIES:
+                await conn.execute(TransactionFamilySQL.insert().values(**family))
 
 
 class PostgresStorage(Storage):

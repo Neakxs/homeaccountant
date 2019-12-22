@@ -38,32 +38,6 @@ async def getPermanentTransaction(request):
 # CREATE OPERATIONS #
 #####################
 
-@transaction_routes.post('/transactionfamily')
-async def registerTransactionFamily(request):
-    if not config.SERVER.REGISTRATION.ALLOW:
-        raise web.HTTPForbidden
-    try:
-        data = await request.json()
-        name = data['name']
-        transaction_family = TransactionFamily(
-            name=name
-        )
-        logger.debug('Trying to add {}'.format(transaction_family))
-        if (await request.app.storage.get_transaction_family(transaction_family)):
-            logger.debug('{} is already used'.format(transaction_family.name))
-            raise web.HTTPOk
-        else:
-            try:
-                transaction_family = await request.app.storage.add_transaction_family(transaction_family)
-            except UniqueViolation:
-                pass
-        raise web.HTTPOk
-    except web.HTTPError as e:
-        raise
-    except Exception as e:
-        raise
-
-
 @transaction_routes.post('/transactioncategory')
 async def registerTransactionCategory(request):
     if not config.SERVER.REGISTRATION.ALLOW:
