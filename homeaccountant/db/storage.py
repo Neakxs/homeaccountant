@@ -112,6 +112,10 @@ class Storage:
     async def _get_existing_tables(self, conn):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    async def _get_existing_families(self, conn):
+        raise NotImplementedError
+
     @classmethod
     async def open_storage(cls):
         storage = PostgresStorage()
@@ -126,8 +130,10 @@ class Storage:
             for table in SQL_TABLES:
                 if str(table) not in existing_tables:
                     await conn.execute(CreateTable(table))
+            existing_families = {i[0] for i in (await (await self._get_existing_families(conn)).fetchall())}
             for family in DEFAULT_FAMILIES:
-                await conn.execute(TransactionFamilySQL.insert().values(**family))
+                if family['uid'] not in existing_families:
+                    await conn.execute(TransactionFamilySQL.insert().values(**family))
 
 
 class PostgresStorage(Storage):
@@ -143,6 +149,11 @@ class PostgresStorage(Storage):
     async def _get_existing_tables(self, conn):
         return await conn.execute(
             "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'")
+
+    async def _get_existing_families(self, conn):
+        return await conn.execute(
+            'SELECT * FROM "TRANSACTION_FAMILY";' 
+        )
 
 
 async def main():
