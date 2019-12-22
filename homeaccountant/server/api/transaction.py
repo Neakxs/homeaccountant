@@ -48,12 +48,10 @@ async def getTransactionCategory(request):
                     'user': str(transaction_category.user),
                     'family': str(transaction_category.family)
                 })
-        except ValueError as e:
-            logger.exception(e)
+        except ValueError:
             raise
         raise web.HTTPOk
-    except Exception as e:
-        logger.exception(e)
+    except Exception:
         raise
 
 
