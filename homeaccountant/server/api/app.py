@@ -22,7 +22,10 @@ bearer_regex = re.compile(r'Bearer\s(?P<token>.*)$')
 async def authentication_middleware(request, handler):
     authorized = False
     try:
-        token = bearer_regex.match(request.headers['Authorization']).group('token')
+        try:
+            token = bearer_regex.match(request.headers['Authorization']).group('token')
+        except AttributeError:
+            raise KeyError
         uid = request.app.tokenmanager.get_uid(token)
         if uid != None:
             request['user_uid'] = uid
@@ -32,7 +35,6 @@ async def authentication_middleware(request, handler):
     if not auth_regex.match(str(request.rel_url)) and not authorized:
         raise web.HTTPUnauthorized
     return await handler(request)
-
 
 class MailSender:
     def __init__(self):

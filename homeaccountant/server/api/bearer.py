@@ -92,7 +92,7 @@ class TokenManager:
             token = self._read_token(refresh_token)
             auth_token = self._generate_jwt_claims()
             auth_token.update({'ses':token['ses'], 'uid':token['uid'], 'typ':int(TokenType.AUTH)})
-            return jwt.encode(auth_token, self.__mapping)
+            return jwt.encode(auth_token, self.__mapping[token['uid']].get(token['ses'])).decode('utf8')
         except KeyError:
             return None
 
