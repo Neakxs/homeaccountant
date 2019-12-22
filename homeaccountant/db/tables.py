@@ -16,6 +16,7 @@ AccountSQL = sa.Table(
     'ACCOUNT', metadata,
     sa.Column('id', sa.Integer, primary_key=True),
     sa.Column('name', sa.String, nullable=False),
+    sa.Column('summary', sa.Float),
     sa.Column('acronym', sa.String),
     sa.Column('user_id', sa.Integer, sa.ForeignKey('USER.id'))
 )

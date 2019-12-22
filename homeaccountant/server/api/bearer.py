@@ -96,9 +96,9 @@ class TokenManager:
         except KeyError:
             return None
 
-    def revoke_tokens(self, refresh_token):
+    def revoke_tokens(self, token):
         try:
-            d = self._read_token(refresh_token)
+            d = self._read_token(token)
             del self.__mapping[d['uid']][d['ses']]
         except Exception as e:
             logger.error(e)
