@@ -7,9 +7,11 @@ from sqlalchemy.sql.ddl import CreateTable
 from aiopg.sa import create_engine
 
 from homeaccountant import config
-from homeaccountant.db.utils import User
-from homeaccountant.db.tables import UserSQL
+from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory
+from homeaccountant.db.tables import UserSQL, TransactionFamilySQL, TransactionCategorySQL
 
+
+SQL_TABLES = [UserSQL, TransactionFamilySQL, TransactionCategorySQL]
 
 class Storage:
     def __init__(self):
@@ -24,7 +26,7 @@ class Storage:
     async def get_user(self, user):
         async with self._engine.acquire() as conn:
             if user.uid:
-                resp = await conn.execute(UserSQL.select().where(UserSQL.c.id == user.uid))
+                resp = await conn.execute(UserSQL.select().where(UserSQL.c.uid == user.uid))
             elif user.email:
                 resp = await conn.execute(UserSQL.select().where(UserSQL.c.email == user.email))
             else:
@@ -38,6 +40,54 @@ class Storage:
                     'password_salt': r[3],
                     'password_hash': r[4],
                     'enabled': r[5]
+                })
+            except TypeError:
+                return None
+
+    async def add_transaction_family(self, transaction_family):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(TransactionFamilySQL.insert().values(name=transaction_family.name))
+            transaction_family.uid = (await resp.fetchone())[0]
+            return transaction_family
+
+    async def get_transaction_family(self, transaction_family):
+        async with self._engine.acquire() as conn:
+            if transaction_family.uid:
+                resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.uid == transaction_family.uid))
+            elif transaction_family.name:
+                resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.name == transaction_family.name))
+            else:
+                return None
+            try:
+                r = await resp.fetchone()
+                return TransactionFamily(**{
+                    'uid': r[0],
+                    'name': r[1]
+                })
+            except TypeError:
+                return None
+    
+    async def add_transaction_category(self, transaction_category):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(TransactionCategorySQL.insert().values(name=transaction_category.name, user_uid=transaction_category.user.uid, transaction_family_uid=transaction_category.family.uid))
+            transaction_category.uid = (await resp.fetchone())[0]
+            return transaction_category
+
+    async def get_transaction_category(self, transaction_category):
+        async with self._engine.acquire() as conn:
+            if transaction_category.uid:
+                resp = await conn.execute(TransactionCategorySQL.select().where(TransactionCategorySQL.c.uid == transaction_category.uid))
+            elif transaction_category.name:
+                resp = await conn.execute(TransactionCategorySQL.select().where(TransactionCategorySQL.c.name == transaction_category.name))
+            else:
+                return None
+            try:
+                r = await resp.fetchone()
+                return TransactionCategory(**{
+                    'uid': r[0],
+                    'name': r[1],
+                    'user': r[2],
+                    'family': r[3]
                 })
             except TypeError:
                 return None
@@ -70,7 +120,7 @@ class Storage:
     async def __init_tables(self):
         async with self._engine.acquire() as conn:
             existing_tables = {i[0] for i in (await (await self._get_existing_tables(conn)).fetchall())}
-            for table in [UserSQL]:
+            for table in SQL_TABLES:
                 if str(table) not in existing_tables:
                     await conn.execute(CreateTable(table))
 
