@@ -15,7 +15,21 @@ transaction_routes = web.RouteTableDef()
 
 @transaction_routes.get('/transactionfamily')
 async def getTransactionFamily(request):
-    raise NotImplementedError
+    try:
+        data = await request.json()
+        family_name = data['name']
+        try:
+            transaction_family = await request.app.storage.get_transaction_family(family_name)
+            if transaction_family:
+                return web.json_response(data={
+                    'uid': transaction_family.uid,
+                    'name': transaction_family.name
+                })
+        except ValueError:
+            raise
+        raise web.HTTPOk
+    except Exception:
+        raise
 
 
 @transaction_routes.get('/transactioncategory')
@@ -40,8 +54,6 @@ async def getPermanentTransaction(request):
 
 @transaction_routes.post('/transactioncategory')
 async def registerTransactionCategory(request):
-    if not config.SERVER.REGISTRATION.ALLOW:
-        raise web.HTTPForbidden
     try:
         data = await request.json()
         name = data['name']

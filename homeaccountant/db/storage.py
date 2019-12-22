@@ -51,20 +51,18 @@ class Storage:
             except TypeError:
                 return None
 
-    async def get_transaction_family(self, transaction_family):
+    async def get_transaction_family(self, transaction_family_name):
         async with self._engine.acquire() as conn:
-            if transaction_family.uid:
-                resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.uid == transaction_family.uid))
-            elif transaction_family.name:
-                resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.name == transaction_family.name))
-            else:
-                return None
+            resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.name == transaction_family_name))
             try:
                 r = await resp.fetchone()
-                return TransactionFamily(**{
-                    'uid': r[0],
-                    'name': r[1]
-                })
+                if r:
+                    return TransactionFamily(**{
+                        'uid': r[0],
+                        'name': r[1]
+                    })
+                else:
+                    return None
             except TypeError:
                 return None
     
