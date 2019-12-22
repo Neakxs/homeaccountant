@@ -57,19 +57,14 @@ paths:
         '401':
           description: Unauthorized
   /user/login:
-    post:
+    get:
       tags:
         - user
       security:
         - basicAuth: []
+        - bearerAuth: []
       summary: Login a user to this API
       operationId: loginUser
-      requestBody:
-        required: True
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserLogin'      
       responses:
         '200':
           description: OK

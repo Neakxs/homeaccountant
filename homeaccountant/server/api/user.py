@@ -21,6 +21,8 @@ try:
     regex_email_allowed = re.compile(config.SERVER.REGISTRATION.REGEX)
 except:
     regex_email_allowed = re.compile(r'.*')
+basic_regex = re.compile(r'Basic\s(?P<auth>.*)$')
+bearer_regex = re.compile(r'Bearer\s(?P<token>.*)$')
 
 
 @user_routes.get('/user')
@@ -87,26 +89,49 @@ async def confirmUser(request):
         raise
 
 
-@user_routes.post('/user/login')
+@user_routes.get('/user/login')
 async def loginUser(request):
     try:
-        data = await request.json()
-        email = data['email']
-        password = data['password']
-        userlogin = User(email, None, None)
-        userlogin = await request.app.storage.get_user(userlogin)
-        if userlogin == None:
-            raise web.HTTPBadRequest
-        password_hash = sha256('{}{}'.format(
-            password, userlogin.password_salt).encode('utf8')).hexdigest()
-        if password_hash == userlogin.password_hash:
-            tokens = request.app.tokenmanager.generate_session_tokens(userlogin.uid)
-            return web.json_response(data={
-                'auth_token': tokens['auth'],
-                'refresh_token': tokens['refresh']
+        try:
+            authorization = request.headers['Authorization']
+        except KeyError:
+            raise web.HTTPUnauthorized
+        basic = basic_regex.match(authorization)
+        bearer = bearer_regex.match(authorization)
+        if basic:
+            try:
+                auth = base64.b64decode(basic.group(
+                    'auth').encode('utf8')).decode('utf8')
+                email, password = auth.split(':', 1)
+            except:
+                raise web.HTTPUnauthorized
+            userlogin = User(email, None, None)
+            userlogin = await request.app.storage.get_user(userlogin)
+            if userlogin == None:
+                raise web.HTTPBadRequest
+            password_hash = sha256('{}{}'.format(
+                password, userlogin.password_salt).encode('utf8')).hexdigest()
+            if password_hash == userlogin.password_hash:
+                tokens = request.app.tokenmanager.generate_session_tokens(
+                    userlogin.uid)
+                return web.json_response(data={
+                    'auth_token': tokens['auth'],
+                    'refresh_token': tokens['refresh']
                 })
+            else:
+                raise web.HTTPUnauthorized
+        elif bearer:
+            token = bearer.group('token')
+            auth_token = request.app.tokenmanager.refresh_auth_token(token)
+            if auth_token:
+                return web.json_response(data={
+                    'auth_token': auth_token,
+                    'refresh_token': token
+                })
+            else:
+                raise web.HTTPUnauthorized
         else:
-            raise web.HTTPForbidden
+            raise web.HTTPUnauthorized
     except web.HTTPError:
         raise
     except Exception as e:
