@@ -36,11 +36,18 @@ async def getTransactionFamily(request):
 async def getTransactionCategory(request):
     try:
         data = await request.json()
-        family_name = data['family_name']
-        name = data['name']
+        transaction_category_uid, family_name, name = None, None, None
+        if 'transaction_category_uid' in data:
+            transaction_category_uid = data['transaction_category_uid']
+        else:
+            transaction_family_uid = data['transaction_family_uid']
+            name = data['name']
         user_uid = request['user_uid']
         try:
-            transaction_category = await request.app.storage.get_transaction_category(name, family_name)
+            if transaction_category_uid:
+                transaction_category = await request.app.storage.get_transaction_category_from_uid(transaction_category_uid)
+            else:
+                transaction_category = await request.app.storage.get_transaction_category_from_name(name, family_name)
             if transaction_category:
                 return web.json_response(data={
                     'uid': transaction_category.uid,
@@ -89,8 +96,8 @@ async def registerTransactionCategory(request):
             family=transaction_family
         )
         logger.debug('Trying to add {}'.format(transaction_category))
-        if (await request.app.storage.get_transaction_category(transaction_category.name, transaction_category.family.name)):
-            logger.debug('{} is already used'.format(transaction_family.name))
+        if (await request.app.storage.get_transaction_category_from_name(transaction_category.name, transaction_category.family.uid)):
+            logger.debug('{} is already used'.format(transaction_category.name))
             raise web.HTTPOk
         else:
             try:
