@@ -25,10 +25,12 @@ async def getTransactionFamily(request):
                     'uid': transaction_family.uid,
                     'name': transaction_family.name
                 })
-        except ValueError:
+        except ValueError as e:
+            logger.exception(e)
             raise
         raise web.HTTPOk
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         raise
 
 
@@ -36,7 +38,7 @@ async def getTransactionFamily(request):
 async def getTransactionCategory(request):
     try:
         data = await request.json()
-        transaction_category_uid, family_name, name = None, None, None
+        transaction_category_uid, transaction_family_uid, name = None, None, None
         if 'transaction_category_uid' in data:
             transaction_category_uid = data['transaction_category_uid']
         else:
@@ -47,7 +49,7 @@ async def getTransactionCategory(request):
             if transaction_category_uid:
                 transaction_category = await request.app.storage.get_transaction_category_from_uid(transaction_category_uid)
             else:
-                transaction_category = await request.app.storage.get_transaction_category_from_name(name, family_name)
+                transaction_category = await request.app.storage.get_transaction_category_from_name(name, transaction_family_uid)
             if transaction_category:
                 return web.json_response(data={
                     'uid': transaction_category.uid,
