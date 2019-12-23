@@ -27,7 +27,14 @@ bearer_regex = re.compile(r'Bearer\s(?P<token>.*)$')
 
 @user_routes.get('/user')
 async def getUser(request):
-    raise NotImplementedError
+    try:
+        userlogin = await request.app.storage.get_user(User(uid=request['user_id']))
+        return web.json_response(data={
+            'email': userlogin.email,
+            'display_name': userlogin.display_name
+        })
+    except Exception as e:
+        logger.exception(e)
 
 
 @user_routes.put('/user')
@@ -142,8 +149,9 @@ async def loginUser(request):
 @user_routes.get('/user/logout')
 async def logoutUser(request):
     try:
-        pass
+        request.app.tokenmanager.revoke_tokens(request['auth_token'])
     except web.HTTPError:
         raise
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         raise

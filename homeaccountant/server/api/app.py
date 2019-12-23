@@ -28,6 +28,7 @@ async def authentication_middleware(request, handler):
             raise KeyError
         uid = request.app.tokenmanager.get_uid(token)
         if uid != None:
+            request['auth_token'] = token
             request['user_uid'] = uid
             authorized = True
     except KeyError:
