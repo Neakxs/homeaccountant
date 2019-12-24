@@ -17,18 +17,20 @@ transaction_routes = web.RouteTableDef()
 async def getTransactionFamily(request):
     try:
         data = await request.json()
-        family_name = data['name']
+        transaction_family_uid = data['transaction_family_uid']
         try:
-            transaction_family = await request.app.storage.get_transaction_family(family_name)
+            transaction_family = await request.app.storage.get_transaction_family_from_uid(transaction_family_uid)
             if transaction_family:
                 return web.json_response(data={
                     'uid': transaction_family.uid,
                     'name': transaction_family.name
                 })
-        except ValueError:
+        except ValueError as e:
+            logger.exception(e)
             raise
         raise web.HTTPOk
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         raise
 
 
@@ -36,11 +38,18 @@ async def getTransactionFamily(request):
 async def getTransactionCategory(request):
     try:
         data = await request.json()
-        family_name = data['family_name']
-        name = data['name']
+        transaction_category_uid, transaction_family_uid, name = None, None, None
+        if 'transaction_category_uid' in data:
+            transaction_category_uid = data['transaction_category_uid']
+        else:
+            transaction_family_uid = data['transaction_family_uid']
+            name = data['name']
         user_uid = request['user_uid']
         try:
-            transaction_category = await request.app.storage.get_transaction_category(name, family_name)
+            if transaction_category_uid:
+                transaction_category = await request.app.storage.get_transaction_category_from_uid(transaction_category_uid)
+            else:
+                transaction_category = await request.app.storage.get_transaction_category_from_name(name, transaction_family_uid)
             if transaction_category:
                 return web.json_response(data={
                     'uid': transaction_category.uid,
@@ -76,9 +85,9 @@ async def registerTransactionCategory(request):
         data = await request.json()
         name = data['name']
         user_uid = request['user_uid']
-        family_name = data['family']
+        transaction_family_uid = data['transaction_family_uid']
         try:
-            transaction_family = await request.app.storage.get_transaction_family(family_name)
+            transaction_family = await request.app.storage.get_transaction_family_from_uid(transaction_family_uid)
             # TODO: instead a creating a User object, use api get_user
             user = await request.app.storage.get_user(User(None, None, None, uid=user_uid))
         except ValueError:
@@ -89,8 +98,8 @@ async def registerTransactionCategory(request):
             family=transaction_family
         )
         logger.debug('Trying to add {}'.format(transaction_category))
-        if (await request.app.storage.get_transaction_category(transaction_category.name, transaction_category.family.name)):
-            logger.debug('{} is already used'.format(transaction_family.name))
+        if (await request.app.storage.get_transaction_category_from_name(transaction_category.name, transaction_category.family.uid)):
+            logger.debug('{} is already used'.format(transaction_category.name))
             raise web.HTTPOk
         else:
             try:
