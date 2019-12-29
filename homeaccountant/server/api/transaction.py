@@ -1,8 +1,11 @@
+import psycopg2.errors
+
 from aiohttp import web
+from psycopg2.errors import UniqueViolation
 
 from homeaccountant import config
 from homeaccountant.log.logger import getLogger
-from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory
+from homeaccountant.db.utils import User, TransactionCategory
 
 logger = getLogger()
 
@@ -89,7 +92,7 @@ async def registerTransactionCategory(request):
         try:
             transaction_family = await request.app.storage.get_transaction_family_from_uid(transaction_family_uid)
             # TODO: instead a creating a User object, use api get_user
-            user = await request.app.storage.get_user(User(None, None, None, uid=user_uid))
+            user = await request.app.storage.get_user(User(uid=user_uid))
         except ValueError:
             raise
         transaction_category = TransactionCategory(
