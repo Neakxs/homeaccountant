@@ -12,7 +12,7 @@ class User:
 @dataclass
 class Account:
     name: str
-    summary: str
+    balance: int
     acronym: str
     user: User = None
     uid: int = None

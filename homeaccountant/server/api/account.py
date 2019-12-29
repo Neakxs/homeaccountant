@@ -39,7 +39,7 @@ async def getAccount(request):
                 return web.json_response(data={
                     'uid': account.uid,
                     'name': account.name,
-                    'summary': account.summary,
+                    'balance': account.balance,
                     'acronym': account.acronym,
                     'user': str(account.user)
                 })
@@ -64,7 +64,7 @@ async def registerAccount(request):
     try:
         data = await request.json()
         name = data['name']
-        summary = data['summary']
+        balance = data['balance']
         acronym = data['acronym']
         user_uid = request['user_uid']
         try:
@@ -73,7 +73,7 @@ async def registerAccount(request):
             raise
         account = Account(
             name=name,
-            summary=summary,
+            balance=balance,
             acronym=acronym,
             user=user
         )

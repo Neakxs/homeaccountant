@@ -53,7 +53,7 @@ class Storage:
     
     async def add_account(self, account):
         async with self._engine.acquire() as conn:
-            resp = await conn.execute(AccountSQL.insert().values(name=account.name, summary=account.summary, acronym=account.acronym, user_uid=account.user.uid))
+            resp = await conn.execute(AccountSQL.insert().values(name=account.name, balance=account.balance, acronym=account.acronym, user_uid=account.user.uid))
             account.uid = (await resp.fetchone())[0]
             return account
     
@@ -66,7 +66,7 @@ class Storage:
                     return Account(**{
                         'uid': r[0],
                         'name': r[1],
-                        'summary': r[2],
+                        'balance': r[2],
                         'acronym': r[3],
                         'user': r[4]
                     })
@@ -84,7 +84,7 @@ class Storage:
                     return Account(**{
                         'uid': r[0],
                         'name': r[1],
-                        'summary': r[2],
+                        'balance': r[2],
                         'acronym': r[3],
                         'user': r[4]
                     })
@@ -102,7 +102,7 @@ class Storage:
                     return Account(**{
                         'uid': r[0],
                         'name': r[1],
-                        'summary': r[2],
+                        'balance': r[2],
                         'acronym': r[3],
                         'user': r[4]
                     })
