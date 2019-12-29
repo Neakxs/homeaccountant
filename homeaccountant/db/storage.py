@@ -20,6 +20,28 @@ DEFAULT_FAMILIES = [
     {'name':'Others', 'uid': 4}
 ]
 
+async def get_object_from(engine, table, dataclass, accessors, values, with_user_uid=False, user_uid=None):
+    async with engine.acquire() as conn:
+        query = table.c[accessors[0]] == values[0]
+        for i in range(1, len(accessors)):
+            query = (query) & (table.c[accessors[i]] == values[i])
+        print(query)
+        if with_user_uid:
+            query = (query) & (table.c['user_uid'] == user_uid)
+        resp = await conn.execute(table.select().where(query))
+        try:
+            r = await resp.fetchone()
+            if r:
+                fields = dataclass.__annotations__
+                for index, value in enumerate(fields):
+                    fields[value] = r[index]
+                print(fields)
+                return dataclass(**fields)
+            else:
+                return None
+        except TypeError:
+            return None
+
 class Storage:
     def __init__(self):
         self._engine = None
@@ -58,76 +80,50 @@ class Storage:
             return account
     
     async def get_account_from_uid(self, account_uid, user_uid):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(AccountSQL.select().where(sa.and_(AccountSQL.c.uid == account_uid, UserSQL.c.uid == user_uid)))
-            try:
-                r = await resp.fetchone()
-                if r:
-                    return Account(**{
-                        'uid': r[0],
-                        'name': r[1],
-                        'balance': r[2],
-                        'acronym': r[3],
-                        'user': r[4]
-                    })
-                else:
-                    return None
-            except TypeError:
-                return None
-    
+        return await get_object_from(
+            engine=self._engine,
+            table=AccountSQL,
+            dataclass=Account,
+            accessors=["uid"],
+            values=[account_uid],
+            with_user_uid=True,
+            user_uid=user_uid
+        )
+
     async def get_account_from_name(self, account_name, user_uid):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(AccountSQL.select().where(sa.and_(AccountSQL.c.name == account_name, UserSQL.c.uid == user_uid)))
-            try:
-                r = await resp.fetchone()
-                if r:
-                    return Account(**{
-                        'uid': r[0],
-                        'name': r[1],
-                        'balance': r[2],
-                        'acronym': r[3],
-                        'user': r[4]
-                    })
-                else:
-                    return None
-            except TypeError:
-                return None
+        return await get_object_from(
+            engine=self._engine,
+            table=AccountSQL,
+            dataclass=Account,
+            accessors=["name"],
+            values=[account_name],
+            with_user_uid=True,
+            user_uid=user_uid
+        )
 
     async def get_account_from_acronym(self, account_acronym, user_uid):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(AccountSQL.select().where(sa.and_(AccountSQL.c.acronym == account_acronym, UserSQL.c.uid == user_uid)))
-            try:
-                r = await resp.fetchone()
-                if r:
-                    return Account(**{
-                        'uid': r[0],
-                        'name': r[1],
-                        'balance': r[2],
-                        'acronym': r[3],
-                        'user': r[4]
-                    })
-                else:
-                    return None
-            except TypeError:
-                return None
+        return await get_object_from(
+            engine=self._engine,
+            table=AccountSQL,
+            dataclass=Account,
+            accessors=["acronym"],
+            values=[account_acronym],
+            with_user_uid=True,
+            user_uid=user_uid
+        )
 
     async def get_accounts(self, user):
         raise NotImplementedError
 
     async def get_transaction_family_from_uid(self, transaction_family_uid):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(TransactionFamilySQL.select().where(TransactionFamilySQL.c.uid == transaction_family_uid))
-            try:
-                r = await resp.fetchone()
-                if r:
-                    return TransactionFamily(**{
-                        'uid': r[0],
-                        'name': r[1]
-                    })
-                else:
-                    return None
-            except TypeError:
-                return None
+        return await get_object_from(
+            engine=self._engine,
+            table=TransactionFamilySQL,
+            dataclass=TransactionFamily,
+            accessors=["uid"],
+            values=[transaction_family_uid],
+            with_user_uid=False
+        )
     
     async def add_transaction_category(self, transaction_category):
         async with self._engine.acquire() as conn:
@@ -136,38 +132,24 @@ class Storage:
             return transaction_category
 
     async def get_transaction_category_from_uid(self, transaction_category_uid):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(TransactionCategorySQL.select().where(TransactionCategorySQL.c.uid == transaction_category_uid))
-            try:
-                r = await resp.fetchone()
-                if r:
-                    return TransactionCategory(**{
-                        'uid': r[0],
-                        'name': r[1],
-                        'user': r[2],
-                        'family': r[3]
-                    })
-                else:
-                    return None
-            except TypeError:
-                return None
+        return await get_object_from(
+            engine=self._engine,
+            table=TransactionCategorySQL,
+            dataclass=TransactionCategory,
+            accessors=["uid"],
+            values=[transaction_category_uid],
+            with_user_uid=False
+        )
 
     async def get_transaction_category_from_name(self, name, transaction_family_uid):
-        async with self._engine.acquire() as conn:
-            resp = await conn.execute(TransactionCategorySQL.select().where(sa.and_(TransactionCategorySQL.c.name == name, TransactionCategorySQL.c.transaction_family_uid == transaction_family_uid)))
-            try:
-                r = await resp.fetchone()
-                if r:
-                    return TransactionCategory(**{
-                        'uid': r[0],
-                        'name': r[1],
-                        'user': r[2],
-                        'family': r[3]
-                    })
-                else:
-                    return None
-            except TypeError:
-                return None
+        return await get_object_from(
+            engine=self._engine,
+            table=TransactionCategorySQL,
+            dataclass=TransactionCategory,
+            accessors=["name", "transaction_family_uid"],
+            values=[name, transaction_family_uid],
+            with_user_uid=False
+        )
 
     async def close(self):
         try:

@@ -19,13 +19,13 @@ class Account:
 
 @dataclass
 class TransactionFamily:
-    name: str
     uid: int = None
+    name: str = None
 
 
 @dataclass
 class TransactionCategory:
-    name: str
-    user: User
-    family: TransactionFamily
     uid: int = None
+    name: str = None
+    user: User = None
+    family: TransactionFamily = None
