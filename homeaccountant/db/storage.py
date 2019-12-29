@@ -8,11 +8,11 @@ from sqlalchemy.orm import sessionmaker
 from aiopg.sa import create_engine
 
 from homeaccountant import config
-from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory
-from homeaccountant.db.tables import UserSQL, TransactionFamilySQL, TransactionCategorySQL
+from homeaccountant.db.utils import User, TransactionFamily, TransactionCategory, Account
+from homeaccountant.db.tables import UserSQL, TransactionFamilySQL, TransactionCategorySQL, AccountSQL
 
 
-SQL_TABLES = [UserSQL, TransactionFamilySQL, TransactionCategorySQL]
+SQL_TABLES = [UserSQL, TransactionFamilySQL, TransactionCategorySQL, AccountSQL]
 DEFAULT_FAMILIES = [
     {'name':'Family 1', 'uid': 1},
     {'name':'Family 2', 'uid': 2},
@@ -50,6 +50,69 @@ class Storage:
                 })
             except TypeError:
                 return None
+    
+    async def add_account(self, account):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(AccountSQL.insert().values(name=account.name, summary=account.summary, acronym=account.acronym, user_uid=account.user.uid))
+            account.uid = (await resp.fetchone())[0]
+            return account
+    
+    async def get_account_from_uid(self, account_uid, user_uid):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(AccountSQL.select().where(sa.and_(AccountSQL.c.uid == account_uid, UserSQL.c.uid == user_uid)))
+            try:
+                r = await resp.fetchone()
+                if r:
+                    return Account(**{
+                        'uid': r[0],
+                        'name': r[1],
+                        'summary': r[2],
+                        'acronym': r[3],
+                        'user': r[4]
+                    })
+                else:
+                    return None
+            except TypeError:
+                return None
+    
+    async def get_account_from_name(self, account_name, user_uid):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(AccountSQL.select().where(sa.and_(AccountSQL.c.name == account_name, UserSQL.c.uid == user_uid)))
+            try:
+                r = await resp.fetchone()
+                if r:
+                    return Account(**{
+                        'uid': r[0],
+                        'name': r[1],
+                        'summary': r[2],
+                        'acronym': r[3],
+                        'user': r[4]
+                    })
+                else:
+                    return None
+            except TypeError:
+                return None
+
+    async def get_account_from_acronym(self, account_acronym, user_uid):
+        async with self._engine.acquire() as conn:
+            resp = await conn.execute(AccountSQL.select().where(sa.and_(AccountSQL.c.acronym == account_acronym, UserSQL.c.uid == user_uid)))
+            try:
+                r = await resp.fetchone()
+                if r:
+                    return Account(**{
+                        'uid': r[0],
+                        'name': r[1],
+                        'summary': r[2],
+                        'acronym': r[3],
+                        'user': r[4]
+                    })
+                else:
+                    return None
+            except TypeError:
+                return None
+
+    async def get_accounts(self, user):
+        raise NotImplementedError
 
     async def get_transaction_family_from_uid(self, transaction_family_uid):
         async with self._engine.acquire() as conn:
