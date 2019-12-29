@@ -25,7 +25,6 @@ async def get_object_from(engine, table, dataclass, accessors, values, with_user
         query = table.c[accessors[0]] == values[0]
         for i in range(1, len(accessors)):
             query = (query) & (table.c[accessors[i]] == values[i])
-        print(query)
         if with_user_uid:
             query = (query) & (table.c['user_uid'] == user_uid)
         resp = await conn.execute(table.select().where(query))
@@ -35,7 +34,6 @@ async def get_object_from(engine, table, dataclass, accessors, values, with_user
                 fields = dataclass.__annotations__
                 for index, value in enumerate(fields):
                     fields[value] = r[index]
-                print(fields)
                 return dataclass(**fields)
             else:
                 return None
