@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from homeaccountant import config
 from homeaccountant.db.utils import User
 from homeaccountant.log.logger import getLogger
-from homeaccountant.server.api import user, transaction, bearer
+from homeaccountant.server.api import user, transaction, account, bearer
 from homeaccountant.db import cache, storage
 
 logger = getLogger()
@@ -73,6 +73,7 @@ class WebAPI:
         self.__site = None
         self.__app.add_routes(user.user_routes)
         self.__app.add_routes(transaction.transaction_routes)
+        self.__app.add_routes(account.account_routes)
 
     def get_app(self):
         return self.__app

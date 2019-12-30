@@ -10,14 +10,22 @@ class User:
     display_name: str = None
 
 @dataclass
-class TransactionFamily:
+class Account:
     name: str
+    balance: int
+    acronym: str
+    user: User = None
     uid: int = None
+
+@dataclass
+class TransactionFamily:
+    uid: int = None
+    name: str = None
 
 
 @dataclass
 class TransactionCategory:
-    name: str
-    user: User
-    family: TransactionFamily
     uid: int = None
+    name: str = None
+    user: User = None
+    family: TransactionFamily = None
